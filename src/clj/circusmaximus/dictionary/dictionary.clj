@@ -76,23 +76,6 @@
 
 (def keywordize-enums (partial keywordize-row dict-enums))
 
-(defn add-base-forms [w]
-  (assoc w :base-forms (base-forms w)))
-
-(defn- load-stem [type word]
-  (->  word
-       (assoc :speech-part type)
-       keywordize-enums
-       add-base-forms))
-
-(defn- load-ending [type word]
-  (->  word
-       (assoc :speech-part type)
-       keywordize-enums))
-
-(defonce dictionary (atom {}))
-
-
 
 (defn base-form-dispatch [word]
   (if (contains? simple-speech-part (:speech-part word))
@@ -320,6 +303,23 @@
 
 (defmethod base-forms :default [w]
   nil)
+
+(defn add-base-forms [w]
+  (assoc w :base-forms (base-forms w)))
+
+(defn- load-stem [type word]
+  (->  word
+       (assoc :speech-part type)
+       keywordize-enums
+       add-base-forms))
+
+(defn- load-ending [type word]
+  (->  word
+       (assoc :speech-part type)
+       keywordize-enums))
+
+(defonce dictionary (atom {}))
+
 
 (defn- properties [word & props]
   ((apply juxt props) word))

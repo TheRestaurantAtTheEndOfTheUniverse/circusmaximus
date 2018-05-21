@@ -264,18 +264,5 @@
     ))
 
 (comment
-  (remove nil? (distinct (filter #(and (contains? % :genetive)
-                                       (nil? (:genetive %)))
-                                 (concat (:words @dictionary)
-                                         (:endings @dictionary)
-                                         ))))
   (time (analyse "ante"))
-
-  ((apply juxt [:infinitive :present]) {:infinitive 1})
-
-  (map println (remove nil? (s/check ds/ending-list (:endings @dictionary))))
-
-  (keys (:stem-lookup @dictionary))
-  (:unprocessed-stems @dictionary)
-
   )

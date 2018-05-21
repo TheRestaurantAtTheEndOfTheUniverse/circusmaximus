@@ -1,9 +1,12 @@
 (ns circusmaximus.handler
-  (:require [compojure.core :refer [GET defroutes]]
+  (:require
+            [compojure.api.sweet :refer :all]
             [compojure.route :refer [not-found resources]]
             [hiccup.page :refer [include-js include-css html5]]
             [circusmaximus.middleware :refer [wrap-middleware]]
-            [config.core :refer [env]]))
+            [circusmaximus.dictionary.analyser :as ana]
+            [config.core :refer [env]]
+            [schema.core :as s]))
 
 (def mount-target
   [:div#app
@@ -27,11 +30,15 @@
      (include-js "/js/app.js")]))
 
 
-(defroutes routes
+(defroutes app-routes
+  (GET "/analyse/:word" []
+       :path-params [word :- s/Str]
+       (ana/analyse word)
+       )
   (GET "/" [] (loading-page))
   (GET "/about" [] (loading-page))
-  
+
   (resources "/")
   (not-found "Not Found"))
 
-(def app (wrap-middleware #'routes))
+(def app (wrap-middleware #'app-routes))
