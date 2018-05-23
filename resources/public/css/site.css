@@ -7,6 +7,7 @@
   font-size: 1.125em;
   color: #333;
   line-height: 1.5em;
+  background: #888;
 }
 
 h1, h2, h3 {
@@ -31,4 +32,47 @@ a {
 
 a:hover {
   text-decoration: underline;
+}
+
+.noun {
+    border-top: 0.35em solid blue;
+}
+
+.adverb {
+    border-top: 0.35em solid red;
+}
+
+.conjunction {
+    border-top: 0.35em solid yellow;
+}
+
+.interjection {
+    border-top: 0.35em solid cornsilk;
+}
+
+.analysed-word {
+    background: white;
+    border-bottom: 1px solid #ccc;
+    border-left: 1px solid #ccc;
+    border-right: 1px solid #ccc;
+    box-shadow: 10px 10px 10px 10px #333;
+    padding-right: 10px;
+    margin-bottom: 2em;
+}
+
+.wordtype {
+    border-bottom: 1px solid #ccc;
+    font-variant: small-caps;
+}
+
+.stem {
+    padding-right: 0.15em;
+}
+
+.ending {
+    padding-left: 0.15em;
+}
+
+.modifier {
+    margin-left: 0.25em
 }

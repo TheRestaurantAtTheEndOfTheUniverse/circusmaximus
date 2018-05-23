@@ -20,6 +20,7 @@
                  [org.postgresql/postgresql "42.1.4"]
                  [com.taoensso/timbre "4.10.0"]
                  [clj-time "0.13.0"]
+                 [com.andrewmcveigh/cljs-time "0.4.0"]
                  [cheshire "5.8.0"]
                  [prismatic/schema "1.1.9"]
                  [org.clojure/core.match "0.3.0-alpha5"]
@@ -27,7 +28,7 @@
                  [cljs-ajax "0.7.3"]
                  [re-frame "0.10.5"]
                  [re-com "2.1.0"]
-
+                 [day8.re-frame/http-fx "0.1.6"]
                  ]
 
   :plugins [[lein-environ "1.1.0"]
