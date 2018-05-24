@@ -88,8 +88,11 @@
        ))
 
 (defn- fits-nounword-stem? [stem word ending]
-  (= (if (or (= (:wordcase ending) :nominative)
-             (= (:wordcase ending) :vocative)
+  (= (if (and (= (:number ending :singular))
+              (or (= (:wordcase ending) :nominative)
+                  (= (:wordcase ending) :vocative)
+                  (and (= (:wordcase ending) :accusative)
+                       (= (:gender word) :neuter)))
              )
        (:nominative word)
        (:genetive word))
@@ -139,6 +142,8 @@
 (defmethod fits-ending? :number [stem word ending]
   (and (= (:speech-part word) :number)
        (= stem (get word (:type ending)))
+       (fits-nounword-declension? word ending)
+
        (or (not= (:type ending) :cardinal)
            (and (= (:number ending) :plural)
                 (> (:numbervalue word) 1))
@@ -168,11 +173,11 @@
 (defmethod fits-ending? :supine [stem word ending]
   (and (= (:speech-part word) :verb)
        (or (= (:conjugation ending) :participle)
-           (= (:conjugation ending) (:conjugation word))
+           (= (:conjugation ending) (:conjugation word)))
        (or (= (:variant ending) 0)
            (= (:variant ending) (:variant word)))
        (= stem (:participle word))
-       )))
+       ))
 
 (defmethod fits-ending? :verb-participle [stem word ending]
   (and (= (:speech-part word) :verb)
@@ -182,7 +187,6 @@
            (= (:variant ending) (:variant word)))
        (= stem (get word (:verbstem ending)))
        ))
-
 
 (defmethod fits-ending? :default [stem word ending]
   (error "Unhandled ending" ending)
@@ -238,8 +242,7 @@
 
 (defn analyse [word]
   (let [fitting-endings (filter #(str/ends-with? word (:ending %))
-                                (:endings @dictionary)
-                                )
+                                (:endings @dictionary))
         word-len        (count word)
         analysed-words  (reduce (fn [results e]
                                   (let [stem          (subs word 0 (- word-len (count (:ending e))))

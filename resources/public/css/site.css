@@ -42,12 +42,28 @@ a:hover {
     border-top: 0.35em solid red;
 }
 
+.adjective {
+    border-top: 0.35em solid orchid;
+}
+
 .conjunction {
     border-top: 0.35em solid yellow;
 }
 
 .interjection {
     border-top: 0.35em solid cornsilk;
+}
+
+.preposition {
+    border-top: 0.35em solid darkorange;
+}
+
+.number {
+    border-top: 0.35em solid yellowgreen;
+}
+
+.verb {
+    border-top: 0.35em solid steelblue;
 }
 
 .analysed-word {
@@ -58,11 +74,13 @@ a:hover {
     box-shadow: 10px 10px 10px 10px #333;
     padding-right: 10px;
     margin-bottom: 2em;
+    padding: 0.25em 1em 1em 1em;
 }
 
 .wordtype {
-    border-bottom: 1px solid #ccc;
+    border-bottom: 1px solid #aaa;
     font-variant: small-caps;
+    margin-bottom: 0.75em;
 }
 
 .stem {
@@ -75,4 +93,15 @@ a:hover {
 
 .modifier {
     margin-left: 0.25em
+}
+
+.stemsep {
+    margin-left: 0.15em;
+    margin-right: 0.15em;
+}
+
+.translation {
+    margin-top: 1em;
+    border-top: 1px solid #aaa;
+    font-size: 0.925em;
 }

@@ -34,6 +34,12 @@ select * from c_numberword
 -- :name db-load-number-endings
 select * from c_numberending
 
+-- :name db-load-prepositions
+select * from c_preposition
+
+-- :name db-load-preposition-endings
+select * from c_prepositionending
+
 -- :name db-load-pronouns
 select * from c_pronoun
 

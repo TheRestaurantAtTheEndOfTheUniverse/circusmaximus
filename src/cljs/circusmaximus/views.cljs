@@ -1,6 +1,6 @@
 (ns circusmaximus.views
   (:require [re-frame.core :as re-frame :refer [dispatch subscribe]]
-            [re-com.core :as re-com]
+            [re-com.core :as re-com :refer [v-box h-box box]]
             [circusmaximus.subs :as subs]
 
             [clojure.string :as str]))
@@ -12,45 +12,120 @@
 
 
 (def speech-part-lookup
-  { :noun "Noun"
-   :adverb "Adverb"
-   :conjunction "Conjunction"
+  { :noun        "Noun"
+   :number       "Number"
+   :adverb       "Adverb"
+   :adjective    "Adjective"
+   :conjunction  "Conjunction"
    :interjection "Interjection"
+   :preposition  "Preposition"
+   :verb         "Verb"
    })
 
+(def voice-lookup
+  {:active  "Active"
+   :passive "Passive"})
+
+(def tense-lookup
+  {:present "Present"
+   :imperfect "Imperfect"
+   :future "Future"
+   :perfect "Perfect"
+   :plusquamperfect "Plusquamperferct"
+   :futureperfect "Future perfect"})
+
+(def conjugation-lookup
+  {:participle "Participle"
+   :a "A"
+   :e "E"
+   :consonant "Consonant"
+   :i "I"
+   :esse "Special (esse)"
+   :ire "Special (ire)"
+   :defective "Defective"
+   :special "Special"})
+
+(def mood-lookup
+  {
+   :indicative "Indicative"
+   :subjunctive "Subjunctive"
+   :imperative "Imperative"
+   :infinitive "Infinitive"
+   :participle "Participle"
+   :supine "Supine"
+   })
+
+(def pers-lookup
+  {
+   1 "First person"
+   2 "Second person"
+   3 "Third person"
+   })
+
+(defn modifier [lookup val]
+  [:span.modifier (lookup val)])
+
+(defn voice [v]
+  [modifier voice-lookup v])
+
+(defn tense [t]
+  [modifier tense-lookup t])
+
+(defn conjugation [c]
+  [:span (str (conjugation-lookup c) " conjugation")])
+
+(defn mood [m]
+  [modifier mood-lookup m]
+  )
+
+(defn person [e]
+  [modifier pers-lookup (:person e)])
+
 (defn wordcase [c]
-  [:span.modifier (case c
-           :nominative "Nominative"
-           :genetive "Genetive"
-           :dative "Dative"
-           :accusative "Accusative"
-           :ablative "Ablative"
-           :vocative "Vocative"
-           :locative "Locative"
-           "Unknown"
-           )])
+  (if-not (= c :unknown)
+    [:span.modifier (case c
+                      :nominative "Nominative"
+                      :genetive   "Genetive"
+                      :dative     "Dative"
+                      :accusative "Accusative"
+                      :ablative   "Ablative"
+                      :vocative   "Vocative"
+                      :locative   "Locative"
+                      (str "Unknown case " c)
+                      )]))
 
 (defn gnumber [n]
-  [:span.modifier (case n
-           :singular "Singular"
-           :plural "Plural"
-           "Unknown"
-           )])
+  (if-not (= n :unknown)
+    [:span.modifier (case n
+                      :singular "Singular"
+                      :plural   "Plural"
+                      (str "Unknown number " n)
+                      )]))
 
 (defn gender [g]
-  [:span (case g
+  (if-not (= g :unknown)
+  [:span.modifier (case g
            :masculine "Masculine"
-           :feminine "Feminine"
-           :neuter "Neuter"
-           "Unknown"
-           )])
+           :feminine  "Feminine"
+           :neuter    "Neuter"
+           (str "Unknown gender" g)
+           )]))
 
 (defn comparison [c]
   [:span (case c
-           :positive "Positive"
+           :positive    "Positive"
            :comparative "Comparative"
            :superlative "Superlative"
-           (str "Unknown" c)
+           (str "Unknown comparison" c)
+           )])
+
+(defn number-type [n]
+  [:span.modifier (case n
+           :cardinal    "Cardinal"
+           :ordinal "Ordinal"
+           :distributive "Distributive"
+           :adverb "Adverb"
+           (str "Unknown number" n)
            )])
 
 
@@ -58,10 +133,10 @@
   [:span
    (str
     (case d
-      :a "a"
-      :o "o"
+      :a         "a"
+      :o         "o"
       :consonant "consonant"
-      :u "u"
+      :u         "u"
       "Unknown"
       ) " declension")])
 
@@ -71,10 +146,15 @@
 (defmethod analysed-details :noun [{:keys [endings base-forms] :as n}]
 (into  [
    [:div [declension (:declension n)]]
-   [:div [gender (:gender n)]]]
+        [:div [gender (:gender n)]]
+        ]
    (map (fn [ending]
          [:div [:span.stem (if (and (= (:number ending) :singular)
-                                    (= (:word-case ending) :nominative))
+                                    (or (= (:wordcase ending) :nominative)
+                                        (= (:wordcase ending) :vocative)
+                                        (and (= (:wordcase ending) :accusative)
+                                             (= (:gender n) :neuter)))
+                                        )
                              (:nominative n)
                              (:genetive n))]
           (if-not (str/blank? (:ending ending)) \u2022)
@@ -83,6 +163,42 @@
           [wordcase(:wordcase ending)]
           [gnumber (:number ending)]])
        endings)))
+
+(defmethod analysed-details :adjective [{:keys [endings base-forms] :as n}]
+  (into  [[declension (:declension n)]]
+         (map (fn [ending]
+                [:div
+                 [:span.stem (if (and (= (:number ending) :singular)
+                                    (or (= (:wordcase ending) :nominative)
+                                        (= (:wordcase ending) :vocative)
+                                        (and (= (:wordcase ending) :accusative)
+                                             (= (:gender n) :neuter))))
+                                    (:nominative n)
+                                    (:genetive n))]
+                 (if-not (str/blank? (:ending ending)) \u2022)
+                 [:span.ending
+                  (:ending ending)]
+                 [wordcase(:wordcase ending)]
+                 [gnumber (:number ending)]
+                 [gender (:gender ending)]
+                 ])
+       endings)))
+
+(defmethod analysed-details :number [{:keys [endings base-forms] :as n}]
+  (into  [[declension (:declension n)]
+          [:div (str (:numbervalue n))]]
+         (map (fn [ending]
+                [h-box
+                 :children [
+                            [:soan (n (:type ending))]
+                            (if-not (str/blank? (:ending ending)) [:span.stemsep "\u2022"])
+                            [:span (:ending ending)]
+                            [gnumber (:number ending)]
+                            [wordcase (:wordcase ending)]
+                            [gender (:gender ending)]
+                            [number-type (:type ending)]
+                            ]])
+              endings)))
 
 (defmethod analysed-details :adverb [{:keys [endings] :as a}]
    (map (fn [ending]
@@ -100,6 +216,46 @@
 (defmethod analysed-details :interjection [{:keys [speech-part] :as w}]
 )
 
+(defmethod analysed-details :preposition [{:keys [endings base-forms] :as n}]
+          (map (fn [ending]
+                 [:div [:span.stem (:form n)]
+                  (if-not (str/blank? (:ending ending)) \u2022)
+                  [:span.ending
+                   (:ending ending)]
+                  [wordcase(:wordcase ending)]
+                  ])
+               endings))
+
+
+(defmethod analysed-details :verb [{:keys [endings base-forms] :as v}]
+  (into [[:div (conjugation (:conjugation v))]]
+        (map (fn [ending]
+               [:div
+                [:span.stem (v (:verbstem ending))]
+                (if-not (str/blank? (:ending ending)) \u2022)
+                [:span.ending
+                 (:ending ending)]
+                (case (:speech-part ending)
+                  :verb-participle [:span (wordcase (:wordcase ending))
+                                    (gnumber (:number ending))
+                                    (gender (:gender ending))
+                                    (tense (:tense ending))
+                                    [:span.modifier "Participle"]
+                                    (voice (:voice ending))
+                                    ]
+                  :verb [:span
+                         (mood (:mood ending))
+                         (if (not= (:mood ending) :infinitive)
+                           (person ending))
+                         (gnumber (:number ending))]
+                  [:div "Not handled " (:speech-part ending)
+                   (str v) (str ending)
+                   ]
+                  )
+                ]
+               )
+             endings)))
+
 (defmethod analysed-details :default [{:keys [speech-part] :as w}]
   [[:div (str "Unhandled: " speech-part)]
    [:div (str w)]])
@@ -108,15 +264,16 @@
 (defn analysed-word [{:keys [speech-part translations base-forms] :as w}]
   (re-com/v-box
    :class (str "analysed-word " (name speech-part))
-   :style {:padding "1em"}
    :children (concat
               [[:div.wordtype
                 (speech-part-lookup speech-part)]
-               [:div (str/join " " base-forms)]]
+               [:div (str/join ", " (map #(str/replace % "zzz" "-")
+                                         (remove nil? base-forms)))]]
               (analysed-details w)
-              [[:div (get translations "en_US")]
+              [[:div.translation (get translations "en_US")]
                ])
-              ))
+   )
+  )
 
 
 (defn main-panel []
@@ -131,4 +288,6 @@
                         [re-com/input-text
                          :model (or @word "")
                          :on-change #(dispatch [:analyse %])]]
-                       (map analysed-word @result))])))
+                       (map analysed-word @result))]
+
+      )))

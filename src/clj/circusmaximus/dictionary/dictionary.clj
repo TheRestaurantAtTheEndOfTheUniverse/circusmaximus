@@ -364,15 +364,17 @@
         noun-endings            (db-load-noun-endings @conn {} {} {:row-fn (partial load-ending :noun)})
         numbers                 (db-load-numbers @conn {} {} {:row-fn (partial load-stem :number)})
         number-endings          (db-load-number-endings @conn {} {} {:row-fn (partial load-ending :number)})
+        prepositions            (db-load-prepositions @conn {} {} {:row-fn (partial load-stem :preposition)})
+        preposition-endings     (db-load-preposition-endings @conn {} {} {:row-fn (partial load-ending :preposition)})
         pronouns                (db-load-pronouns @conn {} {} {:row-fn (partial load-stem :pronoun)})
         pronoun-endings         (db-load-pronoun-endings @conn {} {} {:row-fn (partial load-ending :pronoun)})
         verbs                   (db-load-verbs @conn {} {} {:row-fn (partial load-stem :verb)})
         supine-endings          (db-load-supine-endings @conn {} {} {:row-fn (partial load-ending :supine)})
         verbparticilple-endings (db-load-verbparticiple-endings @conn {} {} {:row-fn (partial load-ending :verb-participle)})
         verb-endings            (db-load-verb-endings @conn {} {} {:row-fn (partial load-ending :verb)})
-        all-words               (concat adjectives adverbs conjunctions interjections nouns numbers pronouns verbs)
+        all-words               (concat adjectives adverbs conjunctions interjections nouns numbers prepositions pronouns verbs)
         all-endings             (concat adjective-endings adverb-endings conjunction-endings interjection-endings
-                                        noun-endings number-endings pronoun-endings supine-endings
+                                        noun-endings number-endings preposition-endings pronoun-endings supine-endings
                                         verbparticilple-endings verb-endings)]
     (reset! dictionary
             {
@@ -396,18 +398,18 @@
              :verb-endings           verb-endings
              :words                  all-words
              :endings                all-endings
-             :stem-lookup (reduce (fn [stems word]
-                                    (reduce #(if (contains? %1 %2)
-                                               (update-in %1 [%2] conj word)
-                                               (assoc %1 %2 #{word}))
-                                            stems
-                                            (map lookup-stem
-                                                 (remove nil? (preprocessed-stems word)))
-                                            )
-                                    )
-                                  {}
-                                  (filter preprocessed-stems all-words))
-             :unprocessed-stems (remove preprocessed-stems all-words)
+             :stem-lookup            (reduce (fn [stems word]
+                                               (reduce #(if (contains? %1 %2)
+                                                          (update-in %1 [%2] conj word)
+                                                          (assoc %1 %2 #{word}))
+                                                       stems
+                                                       (map lookup-stem
+                                                            (remove nil? (preprocessed-stems word)))
+                                                       )
+                                               )
+                                             {}
+                                             (filter preprocessed-stems all-words))
+             :unprocessed-stems      (remove preprocessed-stems all-words)
              })))
 
 (init-db)
