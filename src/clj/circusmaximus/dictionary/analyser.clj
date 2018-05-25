@@ -240,7 +240,7 @@
     (filter #(every? identity (s-fn %))
             endings)))
 
-(defn analyse [word]
+(defn analyse-single [word]
   (let [fitting-endings (filter #(str/ends-with? word (:ending %))
                                 (:endings @dictionary))
         word-len        (count word)
@@ -266,6 +266,32 @@
          (vals analysed-words))
     ))
 
+(defn- keep-vpars [v]
+  (assoc v :endings
+         (filter #(= (:speech-part %)
+                     :verb-participle)
+                 (:endings v))))
+
+
+(defn analyse-participle [w esse]
+  (let [word-result (remove #(empty? (:endings %))
+                            (map keep-vpars (filter #(= (:speech-part %) :verb)
+                                                    (analyse-single w))))
+        [esse-result & rest] (filter #(= (:conjugation %) :esse)
+                                     (analyse-single esse))]
+    (when (and (seq word-result)
+               (nil? rest)
+               (= (:speech-part esse-result) :verb)
+               (= (:conjugation esse-result) :esse))
+      (conj word-result esse-result))))
+
+(defn analyse [word]
+  (let [[w esse & rest] (str/split word #" ")]
+    (cond
+      (and (nil? esse) (nil? rest)) (analyse-single w)
+      (nil? rest) (analyse-participle w esse)
+      :else nil)))
+
 (comment
-  (time (analyse "ante"))
+  (time (analyse "laudare est"))
   )

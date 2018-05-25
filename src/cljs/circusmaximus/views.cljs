@@ -230,11 +230,16 @@
 (defmethod analysed-details :verb [{:keys [endings base-forms] :as v}]
   (into [[:div (conjugation (:conjugation v))]]
         (map (fn [ending]
+               (let [stem (if (= (:speech-part ending) :supine)
+                              (:participle v)
+                              (v (:verbstem ending)))]
                [:div
-                [:span.stem (v (:verbstem ending))]
-                (if-not (str/blank? (:ending ending)) \u2022)
-                [:span.ending
-                 (:ending ending)]
+                [:span.stem stem]
+                (if-not (or
+                         (str/blank? stem)
+                         (str/blank? (:ending ending)))
+                  \u2022)
+                [:span.ending (:ending ending)]
                 (case (:speech-part ending)
                   :verb-participle [:span (wordcase (:wordcase ending))
                                     (gnumber (:number ending))
@@ -248,12 +253,17 @@
                          (if (not= (:mood ending) :infinitive)
                            (person ending))
                          (gnumber (:number ending))]
+                  :supine [:span
+                           (wordcase (:wordcase ending))
+                           (gnumber (:number ending))
+                           (gender (:gender ending))
+                           (tense (:tense ending))
+                           [:span.modifier "Supine"]
+                           (voice (:voice ending))
+                           ]
                   [:div "Not handled " (:speech-part ending)
-                   (str v) (str ending)
-                   ]
-                  )
-                ]
-               )
+                   (str ending)
+                   ])]))
              endings)))
 
 (defmethod analysed-details :default [{:keys [speech-part] :as w}]
