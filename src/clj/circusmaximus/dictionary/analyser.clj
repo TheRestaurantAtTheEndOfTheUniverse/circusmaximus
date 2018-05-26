@@ -266,24 +266,33 @@
          (vals analysed-words))
     ))
 
-(defn- keep-vpars [v]
+(defn- keep-vpars [esse v]
   (assoc v :endings
-         (filter #(= (:speech-part %)
-                     :verb-participle)
-                 (:endings v))))
+         (map #(assoc % :esse-ending esse)
+              (filter #(= (:speech-part %)
+                          :verb-participle)
+                      (:endings v)))))
 
+(defn- participle? [v]
+  (some #(= (:speech-part %) :verb-participle) (:endings v)))
 
 (defn analyse-participle [w esse]
-  (let [word-result (remove #(empty? (:endings %))
-                            (map keep-vpars (filter #(= (:speech-part %) :verb)
-                                                    (analyse-single w))))
-        [esse-result & rest] (filter #(= (:conjugation %) :esse)
-                                     (analyse-single esse))]
-    (when (and (seq word-result)
-               (nil? rest)
-               (= (:speech-part esse-result) :verb)
-               (= (:conjugation esse-result) :esse))
-      (conj word-result esse-result))))
+  (let [[verbs non-verbs] ((juxt filter remove)
+                           #(= (:speech-part %) :verb)
+                           (analyse-single w))
+        [esse non-esse] ((juxt filter remove)
+                         #(= (:conjugation %) :esse)
+                         (analyse-single esse))]
+    (if (and (seq esse)
+             (seq (filter participle? verbs)))
+      (let [esse-ending (-> esse
+                            first
+                            :endings
+                            first)]
+        (filter #(seq (:endings %))
+                (map (partial keep-vpars esse-ending) verbs)))
+      (concat verbs non-verbs esse non-esse)
+      )))
 
 (defn analyse [word]
   (let [[w esse & rest] (str/split word #" ")]
@@ -293,5 +302,11 @@
       :else nil)))
 
 (comment
-  (time (analyse "laudare est"))
+  (time (analyse "amandatus sumus"))
+
+  (map first
+       [["a" "b"]
+        ["c" "d"]])
+
+
   )

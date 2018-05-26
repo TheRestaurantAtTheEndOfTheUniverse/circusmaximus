@@ -68,14 +68,14 @@
 (defn voice [v]
   [modifier voice-lookup v])
 
-(defn tense [t]
-  [modifier tense-lookup t])
+(defn tense [e]
+  [modifier tense-lookup (:tense e)])
 
 (defn conjugation [c]
   [:span (str (conjugation-lookup c) " conjugation")])
 
-(defn mood [m]
-  [modifier mood-lookup m]
+(defn mood [e]
+  [modifier mood-lookup (:mood e)]
   )
 
 (defn person [e]
@@ -232,38 +232,53 @@
         (map (fn [ending]
                (let [stem (if (= (:speech-part ending) :supine)
                               (:participle v)
-                              (v (:verbstem ending)))]
-               [:div
-                [:span.stem stem]
-                (if-not (or
-                         (str/blank? stem)
-                         (str/blank? (:ending ending)))
-                  \u2022)
-                [:span.ending (:ending ending)]
-                (case (:speech-part ending)
-                  :verb-participle [:span (wordcase (:wordcase ending))
-                                    (gnumber (:number ending))
-                                    (gender (:gender ending))
-                                    (tense (:tense ending))
-                                    [:span.modifier "Participle"]
-                                    (voice (:voice ending))
-                                    ]
-                  :verb [:span
-                         (mood (:mood ending))
-                         (if (not= (:mood ending) :infinitive)
-                           (person ending))
-                         (gnumber (:number ending))]
-                  :supine [:span
-                           (wordcase (:wordcase ending))
-                           (gnumber (:number ending))
-                           (gender (:gender ending))
-                           (tense (:tense ending))
-                           [:span.modifier "Supine"]
-                           (voice (:voice ending))
-                           ]
-                  [:div "Not handled " (:speech-part ending)
-                   (str ending)
-                   ])]))
+                              (v (:verbstem ending)))
+                     esse-ending (:esse-ending ending)
+                     ]
+                 [:table {:style {:border-collapse "collapse"}}
+                  [:tbody
+                   [:tr
+                    [:td
+                     [:span.stem stem]
+                     (if-not (or
+                              (str/blank? stem)
+                              (str/blank? (:ending ending)))
+                       \u2022)
+                     [:span.ending (:ending ending)]]
+                    [:td
+                     (case (:speech-part ending)
+                       :verb-participle [:span (wordcase (:wordcase ending))
+                                         (gnumber (:number ending))
+                                         (gender (:gender ending))
+                                         (tense ending)
+                                         [:span.modifier "Participle"]
+                                         (voice (:voice ending))
+                                         ]
+                       :verb [:span
+                              (mood ending)
+                              (if (not= (:mood ending) :infinitive)
+                                (person ending))
+                              (gnumber (:number ending))]
+                       :supine [:span
+                                (wordcase (:wordcase ending))
+                                (gnumber (:number ending))
+                                (gender (:gender ending))
+                                (tense ending)
+                                [:span.modifier "Supine"]
+                                (voice (:voice ending))
+                                ]
+                       [:div "Not handled " (:speech-part ending)
+                        (str ending)
+                        ])]]
+                   (if (:esse-ending ending)
+                     [:tr [:td]
+                      [:td
+                       (person esse-ending)
+                       (tense esse-ending)
+                       (mood esse-ending)
+                       ]]
+                     )
+                   ]]))
              endings)))
 
 (defmethod analysed-details :default [{:keys [speech-part] :as w}]
