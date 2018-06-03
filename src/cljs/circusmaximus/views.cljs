@@ -69,7 +69,9 @@
   [modifier voice-lookup v])
 
 (defn tense [e]
-  [modifier tense-lookup (:tense e)])
+  (cond (map? e) [modifier tense-lookup (:tense e)]
+        (keyword? e) [modifier tense-lookup e]
+        :else (str "Unhandled " e)))
 
 (defn conjugation [c]
   [:span (str (conjugation-lookup c) " conjugation")])
@@ -274,7 +276,11 @@
                      [:tr [:td]
                       [:td
                        (person esse-ending)
-                       (tense esse-ending)
+                       (tense (case (:tense esse-ending)
+                                :present :perfect
+                                :imperfect :plusquamperfect
+                                :future :futureperfect
+                                (str "tense" (:tense esse-ending))))
                        (mood esse-ending)
                        ]]
                      )
