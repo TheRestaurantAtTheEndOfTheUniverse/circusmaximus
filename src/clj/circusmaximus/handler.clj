@@ -8,6 +8,7 @@
             [config.core :refer [env]]
             [schema.core :as s]
             [ring.util.http-response :refer :all]
+            [clojure.tools.logging :refer [info]]
             ))
 
 (def mount-target
@@ -35,7 +36,7 @@
 (defapi app-routes
   (GET "/analyse/:word" []
        :path-params [word :- s/Str]
-       (println "Analysing word" word)
+       (info "Analysing word" word)
 
        (ok (ana/analyse word))
        )

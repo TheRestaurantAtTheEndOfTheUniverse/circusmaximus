@@ -261,10 +261,13 @@
                                             fitting-words)))
                                 {}
                                 fitting-endings)]
-    (map #(assoc %
-                 :endings (prune-endings (:endings %)))
-         (vals analysed-words))
-    ))
+    (apply concat
+     ((juxt filter remove)
+      #(= (:conjugation %) :esse)
+      (map #(assoc %
+                   :endings (prune-endings (:endings %)))
+           (vals analysed-words))
+     ))))
 
 (defn- keep-vpars [esse v]
   (assoc v :endings
@@ -274,39 +277,31 @@
                       (:endings v)))))
 
 (defn- participle? [v]
-  (some #(= (:speech-part %) :verb-participle) (:endings v)))
+  (and (= (:speech-part v) :verb)
+       (some #(= (:speech-part %) :verb-participle) (:endings v))))
 
-(defn analyse-participle [w esse]
-  (let [[verbs non-verbs] ((juxt filter remove)
-                           #(= (:speech-part %) :verb)
-                           (analyse-single w))
-        [esse non-esse] ((juxt filter remove)
-                         #(= (:conjugation %) :esse)
-                         (analyse-single esse))]
-    (if (and (seq esse)
-             (seq (filter participle? verbs)))
-      (let [esse-ending (-> esse
-                            first
-                            :endings
-                            first)]
-        (filter #(seq (:endings %))
-                (map (partial keep-vpars esse-ending) verbs)))
-      (concat verbs non-verbs esse non-esse)
-      )))
+(defn- participle-esse? [esse]
+  (and (= (:speech-part esse) :verb)
+       (= (:conjugation esse) :esse)
+       (contains? #{:present :imperfect :future}
+                  (-> esse :endings first :tense))))
+
+(defn- combine-participle [verb esse]
+  (assoc verb
+         :esse (dissoc esse :endings)
+         :endings
+         (map #(assoc % :esse-ending (first (:endings esse)))
+              (:endings verb)
+              )))
+
+(defn- combine-participles [analysed-words]
+  (loop [[verb esse & tail-end :as words] analysed-words
+         acc []]
+    (if (nil? esse) (conj acc verb)
+        (if (and (participle? verb) (participle-esse? esse))
+          (recur tail-end (conj acc (combine-participle verb esse)))
+          (recur (rest words) (conj acc verb))))))
 
 (defn analyse [word]
-  (let [[w esse & rest] (str/split word #" ")]
-    (cond
-      (and (nil? esse) (nil? rest)) (analyse-single w)
-      (nil? rest) (analyse-participle w esse)
-      :else nil)))
-
-(comment
-  (time (analyse "amandatus sumus"))
-
-  (map first
-       [["a" "b"]
-        ["c" "d"]])
-
-
-  )
+  (let [words (str/split word #" ")]
+    (combine-participles (mapcat analyse-single words))))

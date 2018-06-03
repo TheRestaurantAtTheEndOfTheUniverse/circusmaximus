@@ -26,6 +26,10 @@
   {:active  "Active"
    :passive "Passive"})
 
+(def number-lookup
+  {:singular  "Singular"
+   :plural "Plural"})
+
 (def tense-lookup
   {:present "Present"
    :imperfect "Imperfect"
@@ -77,8 +81,9 @@
   [:span (str (conjugation-lookup c) " conjugation")])
 
 (defn mood [e]
-  [modifier mood-lookup (:mood e)]
-  )
+  (cond (map? e) [modifier mood-lookup (:mood e)]
+        (keyword? e) [modifier mood-lookup e]
+        :else (str "Unhandled " e)))
 
 (defn person [e]
   [modifier pers-lookup (:person e)])
@@ -98,11 +103,9 @@
 
 (defn gnumber [n]
   (if-not (= n :unknown)
-    [:span.modifier (case n
-                      :singular "Singular"
-                      :plural   "Plural"
-                      (str "Unknown number " n)
-                      )]))
+    (cond (map? n) [modifier number-lookup (:number n)]
+          (keyword? n) [modifier number-lookup n]
+          :else (str "Unhandled " n))))
 
 (defn gender [g]
   (if-not (= g :unknown)
@@ -236,6 +239,7 @@
                               (:participle v)
                               (v (:verbstem ending)))
                      esse-ending (:esse-ending ending)
+                     esse (:esse v)
                      ]
                  [:table {:style {:border-collapse "collapse"}}
                   [:tbody
@@ -246,15 +250,26 @@
                               (str/blank? stem)
                               (str/blank? (:ending ending)))
                        \u2022)
-                     [:span.ending (:ending ending)]]
+                     [:span.ending (:ending ending)]
+                     (if (:esse v)
+                       [:span " " (get-in v [:esse (:verbstem esse-ending)])
+                        (:ending esse-ending)]
+                       )]
                     [:td
                      (case (:speech-part ending)
-                       :verb-participle [:span (wordcase (:wordcase ending))
-                                         (gnumber (:number ending))
-                                         (gender (:gender ending))
-                                         (tense ending)
+                       :verb-participle [:span
+                                         (wordcase (:wordcase ending))
+                                         (gnumber (if esse
+                                                    esse-ending
+                                                    ending))
                                          [:span.modifier "Participle"]
-                                         (voice (:voice ending))
+                                         (tense (if esse
+                                                  (case (:tense esse-ending)
+                                                    :present :perfect
+                                                    :imperfect :plusquamperfect
+                                                    :future :futureperfectesse-ending)
+                                                  ending))
+                                         (voice :passive)
                                          ]
                        :verb [:span
                               (mood ending)
@@ -272,18 +287,9 @@
                        [:div "Not handled " (:speech-part ending)
                         (str ending)
                         ])]]
-                   (if (:esse-ending ending)
-                     [:tr [:td]
-                      [:td
-                       (person esse-ending)
-                       (tense (case (:tense esse-ending)
-                                :present :perfect
-                                :imperfect :plusquamperfect
-                                :future :futureperfect
-                                (str "tense" (:tense esse-ending))))
-                       (mood esse-ending)
-                       ]]
-                     )
+                    (if esse
+                      [:tr [:td]
+                       [:td (mood esse-ending) (person esse-ending)]])
                    ]]))
              endings)))
 

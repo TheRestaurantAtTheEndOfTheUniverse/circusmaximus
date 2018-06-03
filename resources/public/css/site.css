@@ -91,6 +91,10 @@ a:hover {
     padding-left: 0.15em;
 }
 
+.modifier:first-child {
+    margin-left: 0
+}
+
 .modifier {
     margin-left: 0.25em
 }
