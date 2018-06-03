@@ -70,7 +70,9 @@
   [:span.modifier (lookup val)])
 
 (defn voice [v]
-  [modifier voice-lookup v])
+  (cond (map? v) [modifier voice-lookup (:voice v)]
+        (keyword? v) [modifier voice-lookup v]
+        :else (str "Unhandled " v)))
 
 (defn tense [e]
   (cond (map? e) [modifier tense-lookup (:tense e)]
@@ -86,6 +88,7 @@
         :else (str "Unhandled " e)))
 
 (defn person [e]
+  (println (:person e))
   [modifier pers-lookup (:person e)])
 
 (defn wordcase [c]
@@ -272,18 +275,18 @@
                                          (voice :passive)
                                          ]
                        :verb [:span
+                              (tense ending)
+                              (voice ending)
                               (mood ending)
                               (if (not= (:mood ending) :infinitive)
                                 (person ending))
-                              (gnumber (:number ending))]
+                              (if (not= (:mood ending) :infinitive)
+                                  (gnumber ending))]
                        :supine [:span
                                 (wordcase (:wordcase ending))
                                 (gnumber (:number ending))
                                 (gender (:gender ending))
-                                (tense ending)
-                                [:span.modifier "Supine"]
-                                (voice (:voice ending))
-                                ]
+                                [:span.modifier "Supine"]]
                        [:div "Not handled " (:speech-part ending)
                         (str ending)
                         ])]]
