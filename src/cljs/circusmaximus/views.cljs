@@ -168,9 +168,33 @@
           (if-not (str/blank? (:ending ending)) \u2022)
           [:span.ending
            (:ending ending)]
-          [wordcase(:wordcase ending)]
-          [gnumber (:number ending)]])
+          [wordcase (:wordcase ending)]
+          [gnumber (:number ending)]
+          (gender ending)])
        endings)))
+
+(defmethod analysed-details :pronoun [{:keys [endings base-forms] :as n}]
+  (into  [
+          [:div [declension (:declension n)]]
+          [:div [gender (:gender n)]]
+          ]
+         (map (fn [ending]
+                [:div [:span.stem (if (and (= (:number ending) :singular)
+                                           (or (= (:wordcase ending) :nominative)
+                                               (= (:wordcase ending) :vocative)
+                                               (and (= (:wordcase ending) :accusative)
+                                                    (= (:gender n) :neuter)))
+                                           )
+                                    (:nominative n)
+                                    (:genetive n))]
+                 (if-not (str/blank? (:ending ending)) \u2022)
+                 [:span.ending
+                  (:ending ending)]
+                 [wordcase(:wordcase ending)]
+                 [gnumber (:number ending)]
+                 (gender ending)])
+              endings)))
+
 
 (defmethod analysed-details :adjective [{:keys [endings base-forms] :as n}]
   (into  [[declension (:declension n)]]
@@ -201,8 +225,8 @@
                             [:soan (n (:type ending))]
                             (if-not (str/blank? (:ending ending)) [:span.stemsep "\u2022"])
                             [:span (:ending ending)]
-                            [gnumber (:number ending)]
                             [wordcase (:wordcase ending)]
+                            [gnumber (:number ending)]
                             [gender (:gender ending)]
                             [number-type (:type ending)]
                             ]])
