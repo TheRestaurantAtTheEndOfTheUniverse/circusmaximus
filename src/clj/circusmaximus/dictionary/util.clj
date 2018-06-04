@@ -51,7 +51,10 @@
 
 (defn- index-extractor [prop]
   (fn [item]
-    (.indexOf (sorters prop) (item prop)))
+    (if (sorters prop)
+      (.indexOf (sorters prop) (item prop))
+      prop)
+      )
   )
 
 (defn sort-parts [props items]

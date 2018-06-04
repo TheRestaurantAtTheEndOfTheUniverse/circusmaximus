@@ -3,6 +3,7 @@
             [clojure.tools.logging :as log :refer [info error]]
             [circusmaximus.dictionary.dictionary :refer [dictionary]]
             [circusmaximus.dictionary.util :refer :all]
+            [circusmaximus.dictionary.util :as util]
             [clojure.core.match :refer [match]]
             ))
 
@@ -65,12 +66,12 @@
 (defn fits-nounword-gender? [word ending]
   (let [eg (:gender ending)
         wg (:gender word)]
-  (and (or (not= eg :common)
-           (contains? compatible-with-common wg))
-       (or (= wg :unknown)
-           (= eg :unknown)
-           (= eg :common)
-           (= eg wg)))))
+    (and (or (not= eg :common)
+             (contains? compatible-with-common wg))
+         (or (= wg :unknown)
+             (= eg :unknown)
+             (= eg :common)
+             (= eg wg)))))
 
 (defn fits-nounword-number? [word ending]
   (let [wn (:number word)
@@ -88,7 +89,7 @@
        ))
 
 (defn- fits-nounword-stem? [stem word ending]
-  (= (if (and (= (:number ending :singular))
+  (= (if (and (= (:number ending) :singular)
               (or (= (:wordcase ending) :nominative)
                   (= (:wordcase ending) :vocative)
                   (and (= (:wordcase ending) :accusative)
@@ -240,6 +241,16 @@
     (filter #(every? identity (s-fn %))
             endings)))
 
+(defmulti sort-endings :speech-part)
+
+(defmethod sort-endings :verb [analysed-word]
+  (assoc analysed-word
+         :endings
+         (util/sort-parts [:speech-part :wordcase :grammaticalnumber :tense :voice :mood :person] (:endings analysed-word))))
+
+(defmethod sort-endings :default [analysed-word]
+  analysed-word)
+
 (defn analyse-single [word]
   (let [fitting-endings (filter #(str/ends-with? word (:ending %))
                                 (:endings @dictionary))
@@ -304,4 +315,4 @@
 
 (defn analyse [word]
   (let [words (str/split word #" ")]
-    (combine-participles (mapcat analyse-single words))))
+    (map sort-endings (combine-participles (mapcat analyse-single words)))))

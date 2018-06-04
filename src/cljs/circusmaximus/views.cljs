@@ -66,6 +66,12 @@
    3 "Third person"
    })
 
+(def gender-lookup
+  {
+   :masculine "Masculine"
+   :feminine  "Feminine"
+   :neuter    "Neuter"})
+
 (defn modifier [lookup val]
   [:span.modifier (lookup val)])
 
@@ -111,13 +117,9 @@
           :else (str "Unhandled " n))))
 
 (defn gender [g]
-  (if-not (= g :unknown)
-  [:span.modifier (case g
-           :masculine "Masculine"
-           :feminine  "Feminine"
-           :neuter    "Neuter"
-           (str "Unknown gender" g)
-           )]))
+  (cond (map? g) [modifier gender-lookup (:gender g)]
+        (keyword? g) [modifier gender-lookup g]
+        :else (str "Unhandled " e)))
 
 (defn comparison [c]
   [:span (case c
@@ -152,26 +154,26 @@
 
 
 (defmethod analysed-details :noun [{:keys [endings base-forms] :as n}]
-(into  [
-   [:div [declension (:declension n)]]
-        [:div [gender (:gender n)]]
-        ]
-   (map (fn [ending]
-         [:div [:span.stem (if (and (= (:number ending) :singular)
-                                    (or (= (:wordcase ending) :nominative)
-                                        (= (:wordcase ending) :vocative)
-                                        (and (= (:wordcase ending) :accusative)
-                                             (= (:gender n) :neuter)))
-                                        )
-                             (:nominative n)
-                             (:genetive n))]
-          (if-not (str/blank? (:ending ending)) \u2022)
-          [:span.ending
-           (:ending ending)]
-          [wordcase (:wordcase ending)]
-          [gnumber (:number ending)]
-          (gender ending)])
-       endings)))
+  (into  [
+          [:div [declension (:declension n)]]
+          [:div [gender (:gender n)]]
+          ]
+         (map (fn [ending]
+                [:div [:span.stem (if (and (= (:number ending) :singular)
+                                           (or (= (:wordcase ending) :nominative)
+                                               (= (:wordcase ending) :vocative)
+                                               (and (= (:wordcase ending) :accusative)
+                                                    (= (:gender n) :neuter)))
+                                           )
+                                    (:nominative n)
+                                    (:genetive n))]
+                 (if-not (str/blank? (:ending ending)) \u2022)
+                 [:span.ending
+                  (:ending ending)]
+                 [wordcase (:wordcase ending)]
+                 [gnumber (:number ending)]
+                 (gender ending)])
+              endings)))
 
 (defmethod analysed-details :pronoun [{:keys [endings base-forms] :as n}]
   (into  [
