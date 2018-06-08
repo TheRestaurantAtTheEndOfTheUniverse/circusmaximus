@@ -248,6 +248,11 @@
          :endings
          (util/sort-parts [:speech-part :wordcase :grammaticalnumber :tense :voice :mood :person] (:endings analysed-word))))
 
+(defmethod sort-endings :noun [analysed-word]
+  (assoc analysed-word
+         :endings
+         (util/sort-parts [:grammaticalnumber :wordcase] (:endings analysed-word))))
+
 (defmethod sort-endings :default [analysed-word]
   analysed-word)
 

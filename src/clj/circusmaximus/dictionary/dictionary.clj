@@ -396,6 +396,7 @@
              :supine-endings         supine-endings
              :verbparticiple-endings verbparticilple-endings
              :verb-endings           verb-endings
+             :esse                   (first (filter #(= (:type %) :esse) verbs))
              :words                  all-words
              :endings                all-endings
              :stem-lookup            (reduce (fn [stems word]
