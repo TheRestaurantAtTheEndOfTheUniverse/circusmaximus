@@ -189,7 +189,9 @@
       (if (seq result)
         (map #(str (:participle word) (:ending %)) result)))
 
-    :else (generate-verbform word number voice mood tense person endings)
+    :else (let [result (generate-verbform word number voice mood tense person endings)]
+            (if (seq result)
+              (map #(str (word (:verbstem %)) (:ending %)) result)))
     )
   )
 
@@ -231,6 +233,18 @@
   ([word comparison]
    (adjective-declension-table word comparison (:endings @dict/dictionary))))
 
+(defn verb-conjugation-table
+  ([word voice mood tense endings]
+  (reduce (fn [table [number person]]
+            (assoc-in table [number person]
+                      (generate-verbform word number voice mood tense person endings)))
+          {}
+          (combo/cartesian-product [:singular :plural]
+                                   [1 2 3])
+          ))
+  ([word voice mood tense]
+   (verb-conjugation-table word voice mood tense (:endings @dict/dictionary))))
+
 (comment
 
   (let [word (second (:adjectives @dict/dictionary))]
@@ -242,7 +256,7 @@
                       (:endings @dict/dictionary))
      )
 
-  (let [word (first (:pronouns @dict/dictionary))]
+  (let [word (nth (:pronouns @dict/dictionary) 2)]
      (pronoun-declension-table word))
 
 
@@ -260,7 +274,7 @@
      (generate-supine word (:endings @dict/dictionary))))
 
   (let [word (first (:verbs @dict/dictionary))]
-     (generate-verb word :passive :indicative :perfect :nominative :singular :masculine 1 (:endings @dict/dictionary)))
+     (verb-conjugation-table word :passive :indicative :present))
 
   (let [word (first (:verbs @dict/dictionary))]
     (clojure.pprint/pprint word)
