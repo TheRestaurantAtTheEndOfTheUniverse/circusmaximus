@@ -2,7 +2,7 @@
   (:require [re-frame.core :as re-frame :refer [dispatch subscribe]]
             [re-com.core :as re-com :refer [v-box h-box box]]
             [circusmaximus.subs :as subs]
-
+            [circusmaximus.wordhelpers :refer [pronoun-stem]]
             [clojure.string :as str]))
 
 (defn title []
@@ -12,7 +12,7 @@
 
 
 (def speech-part-lookup
-  { :noun        "Noun"
+  {:noun         "Noun"
    :number       "Number"
    :adverb       "Adverb"
    :adjective    "Adjective"
@@ -20,6 +20,7 @@
    :interjection "Interjection"
    :preposition  "Preposition"
    :verb         "Verb"
+   :pronoun      "Pronoun"
    })
 
 (def voice-lookup
@@ -119,7 +120,7 @@
 (defn gender [g]
   (cond (map? g) [modifier gender-lookup (:gender g)]
         (keyword? g) [modifier gender-lookup g]
-        :else (str "Unhandled " e)))
+        :else [:div (str "Unhandled " g)]))
 
 (defn comparison [c]
   [:span (case c
@@ -177,25 +178,19 @@
 
 (defmethod analysed-details :pronoun [{:keys [endings base-forms] :as n}]
   (into  [
-          [:div [declension (:declension n)]]
-          [:div [gender (:gender n)]]
+          [:div [declension (:declension n)] [:span.modifier (str "(" (name (:type n)) ")")]]
           ]
          (map (fn [ending]
-                [:div [:span.stem (if (and (= (:number ending) :singular)
-                                           (or (= (:wordcase ending) :nominative)
-                                               (= (:wordcase ending) :vocative)
-                                               (and (= (:wordcase ending) :accusative)
-                                                    (= (:gender n) :neuter)))
-                                           )
-                                    (:nominative n)
-                                    (:genetive n))]
+                [:div
+                 [:span.stem (pronoun-stem n ending)]
                  (if-not (str/blank? (:ending ending)) \u2022)
                  [:span.ending
                   (:ending ending)]
                  [wordcase(:wordcase ending)]
                  [gnumber (:number ending)]
                  (gender ending)])
-              endings)))
+              endings)
+         ))
 
 
 (defmethod analysed-details :adjective [{:keys [endings base-forms] :as n}]
@@ -333,8 +328,9 @@
    :children (concat
               [[:div.wordtype
                 (speech-part-lookup speech-part)]
-               [:div (str/join ", " (map #(str/replace % "zzz" "-")
-                                         (remove nil? base-forms)))]]
+               (if base-forms
+                 [:div (str/join ", " (map #(str/replace % "zzz" "-")
+                                           (remove nil? base-forms)))])]
               (analysed-details w)
               [[:div.translation (get translations "en_US")]
                ])

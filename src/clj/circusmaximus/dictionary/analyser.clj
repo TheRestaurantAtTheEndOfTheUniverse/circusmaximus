@@ -5,6 +5,7 @@
             [circusmaximus.dictionary.util :refer :all]
             [circusmaximus.dictionary.util :as util]
             [clojure.core.match :refer [match]]
+            [circusmaximus.wordhelpers :refer :all]
             ))
 
 (def ^:const use-locative true)
@@ -43,8 +44,10 @@
   (or (= (:form word) stem)))
 
 (defmethod fits-stem? :pronoun [stem word]
-  (or (= (:nominative word) stem)
-      (= (:genetive word) stem)))
+  (or (and (not= (:nominative word) "zzz")
+           (= (:nominative word) stem))
+      (and (not= (:genetive word) "zzz")
+           (= (:genetive word) stem))))
 
 (defmethod fits-stem? :verb [stem word]
 (or (= (:present word) stem)
@@ -59,6 +62,7 @@
   (or (= (:declension ending) :comparison)
       (and (= (:declension ending) (:declension word))
            (or (= 0 (:variant ending))
+               (= 0 (:variant word))
                (= (:variant ending) (:variant word))))))
 
 (def compatible-with-common #{:unknown :feminine :masculine :common})
@@ -89,15 +93,15 @@
        ))
 
 (defn- fits-nounword-stem? [stem word ending]
-  (= (if (and (= (:number ending) :singular)
-              (or (= (:wordcase ending) :nominative)
-                  (= (:wordcase ending) :vocative)
-                  (and (= (:wordcase ending) :accusative)
-                       (= (:gender word) :neuter)))
-             )
-       (:nominative word)
-       (:genetive word))
-     stem))
+  (let [match-stem (if (and (= (:number ending) :singular)
+                            (or (= (:wordcase ending) :nominative)
+                                (= (:wordcase ending) :vocative)
+                                (and (= (:wordcase ending) :accusative)
+                                     (= (:gender word) :neuter))))
+                     (:nominative word)
+                     (:genetive word))]
+    (and (not= match-stem "zzz")
+         (= match-stem stem))))
 
 (defn fits-noundword-ending [stem word ending]
   (and (nounword? word)
@@ -159,6 +163,8 @@
 
 (defmethod fits-ending? :pronoun [stem word ending]
   (and (= (:speech-part word) :pronoun)
+       (not= (pronoun-stem word ending) "zzz")
+       (= (pronoun-stem word ending) stem)
        (fits-nounword-number? word ending)
        (fits-nounword-declension? word ending)))
 

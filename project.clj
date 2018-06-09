@@ -29,6 +29,7 @@
                  [re-frame "0.10.5"]
                  [re-com "2.1.0"]
                  [day8.re-frame/http-fx "0.1.6"]
+                 [org.clojure/math.combinatorics "0.1.4"]
                  ]
 
   :plugins [[lein-environ "1.1.0"]

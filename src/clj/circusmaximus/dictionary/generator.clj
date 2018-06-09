@@ -1,7 +1,10 @@
 (ns circusmaximus.dictionary.generator
   (:require [circusmaximus.dictionary.analyser :as ana]
             [circusmaximus.dictionary.util :as util]
-            [circusmaximus.dictionary.dictionary :as dict]))
+            [circusmaximus.dictionary.dictionary :as dict]
+            [circusmaximus.wordhelpers :refer :all]
+            [clojure.string :as str]
+            [clojure.math.combinatorics :as combo]))
 
 
 (def ^:const allowed-verb-combination
@@ -55,39 +58,61 @@
     :superlative (:superlative word)))
 
 (defn generate-adjective [word number wordcase gender comparison endings]
-  (let [stem (adjective-stem word wordcase comparison)]
-    (util/sort-parts [:frequency]
-                     (filter (fn [ending]
-                               (and (= (:speech-part ending) :adjective)
-                                    (ana/fits-ending? stem word ending)
-                                    (= (:number ending) number)
-                                    (= (:wordcase ending) wordcase)
-                                    (gender-compatible? gender (:gender ending))
-                                    (= (:comparison ending) comparison)
-                                    ))
-                             endings))))
+  (let [stem (adjective-stem word wordcase comparison)
+        matching (util/sort-parts [:frequency]
+                                  (filter (fn [ending]
+                                            (and (= (:speech-part ending) :adjective)
+                                                 (ana/fits-ending? stem word ending)
+                                                 (= (:number ending) number)
+                                                 (= (:wordcase ending) wordcase)
+                                                 (gender-compatible? gender (:gender ending))
+                                                 (= (:comparison ending) comparison)
+                                                 ))
+                                          endings))]
+    (if (seq matching)
+      (map #(str stem (:ending %)) matching))))
 
 (defn generate-adverb [word comparison endings]
-  (let [stem (get word comparison)]
-    (util/sort-parts [:frequency]
-                     (filter (fn [ending]
-                               (and (= (:speech-part ending) :adverb)
-                                    (ana/fits-ending? stem word ending)
-                                    (= (:comparison ending) comparison)))
-                             endings))))
+  (let [stem (get word comparison)
+        matching (if-not (str/blank? stem)
+                   (util/sort-parts [:frequency]
+                                    (filter (fn [ending]
+                                              (and (= (:speech-part ending) :adverb)
+                                                   (ana/fits-ending? stem word ending)
+                                                   (= (:comparison ending) comparison)))
+                                            endings)))]
+    (if (seq matching)
+      (map #(str stem (:ending %)) matching))))
 
 (defn generate-noun [word number wordcase endings]
   (let [stem (if (and (= wordcase :nominative)
                       (= number :singular))
                (:nominative word)
-               (:genetive word))]
-    (util/sort-parts [:frequency]
-                     (filter (fn [ending]
-                               (and (= (:speech-part ending) :noun)
-                                    (ana/fits-ending? stem word ending)
-                                    (= (:number ending) number)
-                                    (= (:wordcase ending) wordcase)))
-                             endings))))
+               (:genetive word))
+        matching (if-not (str/blank? stem)
+                   (util/sort-parts [:frequency]
+                                    (filter (fn [ending]
+                                              (and (= (:speech-part ending) :noun)
+                                                   (ana/fits-ending? stem word ending)
+                                                   (= (:number ending) number)
+                                                   (= (:wordcase ending) wordcase)))
+                                            endings)))]
+    (if (seq matching)
+      (map #(str stem (:ending %)) matching))))
+
+(defn generate-pronoun [word number wordcase gender endings]
+  (let [matching (util/sort-parts [:frequency]
+                                  (filter (fn [ending]
+                                            (let [stem (pronoun-stem word ending)]
+                                              (and (= (:speech-part ending) :pronoun)
+                                                   (ana/fits-ending? stem word ending)
+                                                   (= (:number ending) number)
+                                                   (or (= (:gender ending) gender)
+                                                       (= (:gender ending) :unknown))
+                                                   (= (:wordcase ending) wordcase))))
+                                            endings))]
+    (if (seq matching)
+      (map #(str (pronoun-stem word %) (:ending %)) matching))))
 
 (defn generate-infinitive [word voice tense endings]
   (if-not (contains? allowed-verb-combination [:infinitive tense voice])
@@ -168,24 +193,61 @@
     )
   )
 
+(defn noun-declension-table
+  ([word endings]
+  (reduce (fn [table [number wordcase]]
+            (assoc-in table [number wordcase]
+                      (generate-noun word number wordcase endings)))
+          {}
+          (combo/cartesian-product [:singular :plural]
+                                   [:nominative :genetive :accusative :dative :ablative]))
+  )
+  ([word]
+   (noun-declension-table word (:endings @dict/dictionary))))
+
+(defn pronoun-declension-table
+  ([word endings]
+  (reduce (fn [table [number wordcase gender]]
+            (assoc-in table [number wordcase gender]
+                      (generate-pronoun word number wordcase gender endings)))
+          {}
+          (combo/cartesian-product [:singular :plural]
+                                   [:nominative :genetive :accusative :dative :ablative]
+                                   [:masculine :feminine :neuter])))
+  ([word]
+   (pronoun-declension-table word (:endings @dict/dictionary))))
+
+
+(defn adjective-declension-table
+  ([word comparison endings]
+  (reduce (fn [table [number gender wordcase]]
+            (assoc-in table [number wordcase gender]
+                      (generate-adjective word number wordcase gender comparison endings)))
+          {}
+          (combo/cartesian-product [:singular :plural]
+                                   [:nominative :genetive :accusative :dative :ablative]
+                                   [:masculine :feminine :neuter]
+                                   )))
+  ([word comparison]
+   (adjective-declension-table word comparison (:endings @dict/dictionary))))
+
 (comment
 
   (let [word (second (:adjectives @dict/dictionary))]
-    (clojure.pprint/pprint word)
-    (clojure.pprint/pprint
-             (generate-adjective word
-                                 :plural :nominative :masculine :positive
-                                 (:endings @dict/dictionary))
+    (adjective-declension-table word :positive))
 
-             ))
-
-  (let [word (first (:adverbs @dict/dictionary))]
-    (clojure.pprint/pprint word)
-    (clojure.pprint/pprint
+  (let [word (second (:adverbs @dict/dictionary))]
      (generate-adverb word
                       :comparative
                       (:endings @dict/dictionary))
-             ))
+     )
+
+  (let [word (first (:pronouns @dict/dictionary))]
+     (pronoun-declension-table word))
+
+
+  (let [word (second (:nouns @dict/dictionary))]
+    (noun-declension-table word))
 
   (let [word (first (:verbs @dict/dictionary))]
     (clojure.pprint/pprint word)
@@ -198,7 +260,7 @@
      (generate-supine word (:endings @dict/dictionary))))
 
   (let [word (first (:verbs @dict/dictionary))]
-     (generate-verb word :passive :indicative :futureperfect :nominative :singular :masculine 1 (:endings @dict/dictionary)))
+     (generate-verb word :passive :indicative :perfect :nominative :singular :masculine 1 (:endings @dict/dictionary)))
 
   (let [word (first (:verbs @dict/dictionary))]
     (clojure.pprint/pprint word)
