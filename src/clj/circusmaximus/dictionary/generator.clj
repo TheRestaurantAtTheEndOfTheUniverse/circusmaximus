@@ -1,4 +1,4 @@
-(ns circusmaximus.dictionary.generator
+(ns circusmaximus.dictionary.genrator
   (:require [circusmaximus.dictionary.analyser :as ana]
             [circusmaximus.dictionary.util :as util]
             [circusmaximus.dictionary.dictionary :as dict]
@@ -154,13 +154,16 @@
                                   (= (:number ending) number)
                                   (= (:tense ending) tense)
                                   (= (:wordcase ending) wordcase)
-                                  (= (:gender ending) gender)))
+                                  (or (= (:gender ending) gender)
+                                      (= (:gender ending) :unknown))
+                                      ))
                            endings)))
 
 
 (defn generate-verb [word voice mood tense wordcase number gender person endings]
   (cond
     (= mood :infinitive) (generate-infinitive word voice tense endings)
+
     (= mood :supine) (let [result (generate-supine word endings)]
                        (if (seq result)
                          (map #(str (:participle word) (:ending %)) result)))
@@ -174,13 +177,11 @@
                        :futureperfect :future
                        nil)
           esse-form (if (seq word-result)
-                      (first (generate-verb (:esse @dict/dictionary) :active mood esse-tense wordcase number gender person endings)))
+                      (first (generate-verb (:esse @dict/dictionary) :active mood esse-tense nil number nil person endings)))
           ]
       (if (and (seq word-result)
                esse-form)
-        (map #(str (:participle word) (:ending %) " " (get (:esse @dict/dictionary)
-                                                           (:verbstem esse-form))
-                   (:ending esse-form)) word-result)))
+        (map #(str (:participle word) (:ending %) " " esse-form) word-result)))
 
     (and (= voice :active)
          (= tense :future)
@@ -237,13 +238,30 @@
   ([word voice mood tense endings]
   (reduce (fn [table [number person]]
             (assoc-in table [number person]
-                      (generate-verbform word number voice mood tense person endings)))
+                      (generate-verb word voice mood tense nil number nil person endings)))
           {}
           (combo/cartesian-product [:singular :plural]
                                    [1 2 3])
           ))
   ([word voice mood tense]
    (verb-conjugation-table word voice mood tense (:endings @dict/dictionary))))
+
+
+(defn verb-participle-table
+  ([word mood tense person endings]
+   (reduce (fn [table [number wordcase gender]]
+             (assoc-in table [number wordcase gender]
+                       (generate-verb word :passive mood tense wordcase number gender person endings)))
+           {}
+           (combo/cartesian-product [:singular :plural]
+                                    [:nominative :genetive :accusative :dative :ablative]
+                                    [:masculine :feminine :neuter]
+                                    )
+           ))
+  ([word mood tense person]
+   (verb-participle-table word mood tense person (:endings @dict/dictionary))))
+
+
 
 (comment
 
@@ -273,13 +291,18 @@
     (clojure.pprint/pprint
      (generate-supine word (:endings @dict/dictionary))))
 
-  (let [word (first (:verbs @dict/dictionary))]
-     (verb-conjugation-table word :passive :indicative :present))
+  (let [word (nth (:verbs @dict/dictionary) 5312)]
+     (verb-conjugation-table word :active :subjunctive :plusquamperfect))
 
-  (let [word (first (:verbs @dict/dictionary))]
-    (clojure.pprint/pprint word)
-    (clojure.pprint/pprint
-     (generate-participle word :plural :perfect :genetive :masculine (:endings @dict/dictionary))))
+  (let [word (nth (:verbs @dict/dictionary) 412)]
+     (verb-participle-table word :indicative :perfect 3))
+
+
+
+ (let [word (nth (:verbs @dict/dictionary) 412)]
+   (clojure.pprint/pprint word)
+   (clojure.pprint/pprint
+    (generate-participle word :plural :perfect :dative :masculine (:endings @dict/dictionary))))
 
 
   )
