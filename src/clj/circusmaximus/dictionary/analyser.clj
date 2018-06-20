@@ -6,7 +6,8 @@
             [circusmaximus.dictionary.util :as util]
             [clojure.core.match :refer [match]]
             [circusmaximus.wordhelpers :refer :all]
-            ))
+
+            [clojure.math.combinatorics :as combo]))
 
 (def ^:const use-locative true)
 
@@ -50,10 +51,12 @@
            (= (:genetive word) stem))))
 
 (defmethod fits-stem? :verb [stem word]
-(or (= (:present word) stem)
-    (= (:infinitive word) stem)
-    (= (:perfect word) stem)
-    (= (:participle word) stem)))
+  (or (= (:present word) stem)
+      (= (:infinitive word) stem)
+      (and (seq (:perfect word))
+           (= (:perfect word) stem))
+      (and (seq (:participle word))
+           (= (:participle word) stem))))
 
 (defmethod fits-stem? :default [stem word]
   false)
@@ -278,7 +281,9 @@
                                     (reduce (fn [results dictword]
                                               (if (contains? results (:id dictword))
                                                 (update-in results [(:id dictword) :endings] conj e)
-                                                (assoc results (:id dictword) (assoc dictword :endings [e]))))
+                                                (assoc results (:id dictword) (assoc dictword
+                                                                                     :analysed-from word
+                                                                                     :endings [e]))))
                                             results
                                             fitting-words)))
                                 {}
@@ -310,20 +315,43 @@
 
 (defn- combine-participle [verb esse]
   (assoc verb
-         :esse (dissoc esse :endings)
+         :esse (dissoc esse :endings :analysed-from)
+         :analysed-from (str (:analysed-from verb) " " (:analysed-from esse))
          :endings
-         (map #(assoc % :esse-ending (first (:endings esse)))
+         (map #(assoc %
+                      :esse-ending (first (:endings esse)))
               (:endings verb)
               )))
 
 (defn- combine-participles [analysed-words]
   (loop [[verb esse & tail-end :as words] analysed-words
          acc []]
-    (if (nil? esse) (conj acc verb)
-        (if (and (participle? verb) (participle-esse? esse))
-          (recur tail-end (conj acc (combine-participle verb esse)))
-          (recur (rest words) (conj acc verb))))))
+    (if (nil? esse) (concat acc verb)
+        (let [[participles non-participles] ((juxt filter remove) participle? verb)
+              [participle-esse non-participle-esse] ((juxt filter remove) participle-esse? esse)
+              combined-participles (map #(combine-participle (first %) (second %))
+                                        (combo/cartesian-product participles participle-esse))
+              ]
+          (recur tail-end (concat acc verb esse combined-participles))))))
 
-(defn analyse [word]
-  (let [words (str/split word #" ")]
-    (map sort-endings (combine-participles (mapcat analyse-single words)))))
+(defn- split-words [words]
+  (str/split words #"[^A-Za-z]+"))
+
+(defn- produce-analysed-lookup [analysed]
+  (into {}
+       (map (fn [[from meanings]]
+              [from (set (map #(dissoc % :analysed-from) meanings))])
+            (group-by :analysed-from analysed)
+       )))
+
+(defn analyse [text]
+  (let [words (split-words text)]
+    (produce-analysed-lookup
+     (map sort-endings (combine-participles (map analyse-single words))))))
+
+(comment
+  (let [words (split-words "laudaturus est vir")]
+  (map analyse-single words))
+  (analyse "laudaturus est vir")
+  (analyse-single "a")
+  )

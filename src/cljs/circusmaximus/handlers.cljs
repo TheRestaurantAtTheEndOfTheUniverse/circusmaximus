@@ -4,6 +4,7 @@
             [ajax.core :as ajax]
             [cognitect.transit :as transit]
             [cljs-time.core :as time]
+            [cemerick.url :refer (url url-encode)]
             )
      (:import [goog.date UtcDateTime]))
 
@@ -52,7 +53,7 @@
  (fn [{:keys [db]} [_ word]]
    { :db (assoc-in db [:analysed-word :word] word)
     :http-xhrio {:method          :get
-                 :uri             (str "/analyse/" word)
+                 :uri             (str "/analyse/" (url-encode word))
                  :response-format resp-format
                  :on-success      [:word-analysed-successfully]
                  :on-failure      [:word-analyse-failed]}}))

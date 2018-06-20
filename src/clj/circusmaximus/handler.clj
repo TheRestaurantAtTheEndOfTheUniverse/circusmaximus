@@ -9,6 +9,7 @@
             [schema.core :as s]
             [ring.util.http-response :refer :all]
             [clojure.tools.logging :refer [info]]
+            [circusmaximus.forms :as cf]
             ))
 
 (def mount-target
@@ -34,12 +35,22 @@
 
 
 (defapi app-routes
-  (GET "/analyse/:word" []
-       :path-params [word :- s/Str]
-       (info "Analysing word" word)
+  (GET "/analyse/:text" []
+       :path-params [text :- s/Str]
+       (info "Analysing text" text)
 
-       (ok (ana/analyse word))
-       )
+       (ok (ana/analyse text)))
+  (context "/generate" []
+           (GET "/verb/:verb-id/:tense/:mood/:voice" []
+                       :path-params [tense :- s/Str mood :- s/Str voice :- s/Str]
+      (if-not (contains? cf/allowed-verb-combinations [tense mood voice])
+        (bad-request {:cause "Parameter combination not allowed"})
+        )
+
+
+        (ok nil)
+        )
+    )
   (GET "/" [] (loading-page))
   (GET "/about" [] (loading-page))
 

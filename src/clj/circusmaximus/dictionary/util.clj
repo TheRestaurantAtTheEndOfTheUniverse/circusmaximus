@@ -19,7 +19,6 @@
    :comparison [:positive :comparative :superlative :unknown]
 
    :word-frequency [:very-frequent :frequent :common :lesser :uncommon :very-rare :inscription :graffiti :pliny :unknown]
-
    :gender [:masculine :feminine :neuter :common :unknown]
 
    :tense [:present :imperfect :future :perfect :plusquamperfect :futureperfect :unknown]
