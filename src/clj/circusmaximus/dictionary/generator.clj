@@ -1,4 +1,4 @@
-(ns circusmaximus.dictionary.genrator
+(ns circusmaximus.dictionary.generator
   (:require [circusmaximus.dictionary.analyser :as ana]
             [circusmaximus.dictionary.util :as util]
             [circusmaximus.dictionary.dictionary :as dict]

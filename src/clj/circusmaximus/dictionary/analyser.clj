@@ -6,10 +6,18 @@
             [circusmaximus.dictionary.util :as util]
             [clojure.core.match :refer [match]]
             [circusmaximus.wordhelpers :refer :all]
-
-            [clojure.math.combinatorics :as combo]))
+            [clojure.tools.logging :refer [info error]]
+            [clojure.math.combinatorics :as combo]
+            [metrics.timers :refer [deftimer time!]]
+            [metrics.histograms :refer [defhistogram update!]])
+  )
 
 (def ^:const use-locative true)
+
+(deftimer fit-stem-timer)
+(deftimer word-analyse-timer)
+(defhistogram fitting-endings-histogram)
+(defhistogram fitting-words-histogram)
 
 (defn nounword? [s]
   (contains? #{:adjective :adverb :noun :number :pronoun} (:speech-part s)))
@@ -17,46 +25,54 @@
 (defmulti fits-stem? #(:speech-part %2))
 
 (defmethod fits-stem? :adjective [stem word]
-  (or (= (:nominative word) stem)
-      (= (:genetive word) stem)))
+  (time! fit-stem-timer
+         (or (= (:nominative word) stem)
+             (= (:genetive word) stem))))
 
 (defmethod fits-stem? :adverb[stem word]
-  (or (= (:positive word) stem)
-      (= (:comparative word) stem)
-      (= (:superlative word) stem)))
+  (time! fit-stem-timer
+         (or (= (:positive word) stem)
+             (= (:comparative word) stem)
+             (= (:superlative word) stem))))
 
 (defmethod fits-stem? :conjunction [stem word]
-  (or (= (:form word) stem)))
+  (time! fit-stem-timer
+         (or (= (:form word) stem))))
 
 (defmethod fits-stem? :interjection [stem word]
-  (or (= (:form word) stem)))
+  (time! fit-stem-timer
+         (or (= (:form word) stem))))
 
 (defmethod fits-stem? :noun [stem word]
-  (or (= (:nominative word) stem)
-      (= (:genetive word) stem)))
+  (time! fit-stem-timer  (or (= (:nominative word) stem)
+                             (= (:genetive word) stem))))
 
 (defmethod fits-stem? :number [stem word]
-  (or (= (:cardinal word) stem)
-      (= (:ordinal word) stem)
-      (= (:distributive word) stem)
-      (= (:adverb word) stem)))
+  (time! fit-stem-timer
+         (or (= (:cardinal word) stem)
+             (= (:ordinal word) stem)
+             (= (:distributive word) stem)
+             (= (:adverb word) stem))))
 
 (defmethod fits-stem? :preposition [stem word]
-  (or (= (:form word) stem)))
+  (time! fit-stem-timer
+         (or (= (:form word) stem))))
 
 (defmethod fits-stem? :pronoun [stem word]
-  (or (and (not= (:nominative word) "zzz")
-           (= (:nominative word) stem))
-      (and (not= (:genetive word) "zzz")
-           (= (:genetive word) stem))))
+  (time! fit-stem-timer
+         (or (and (not= (:nominative word) "zzz")
+                  (= (:nominative word) stem))
+             (and (not= (:genetive word) "zzz")
+                  (= (:genetive word) stem)))))
 
 (defmethod fits-stem? :verb [stem word]
-  (or (= (:present word) stem)
-      (= (:infinitive word) stem)
-      (and (seq (:perfect word))
-           (= (:perfect word) stem))
-      (and (seq (:participle word))
-           (= (:participle word) stem))))
+  (time! fit-stem-timer
+         (or (= (:present word) stem)
+             (= (:infinitive word) stem)
+             (and (seq (:perfect word))
+                  (= (:perfect word) stem))
+             (and (seq (:participle word))
+                  (= (:participle word) stem)))))
 
 (defmethod fits-stem? :default [stem word]
   false)
@@ -118,11 +134,11 @@
   (and (= (:speech-part word) :adjective)
        (fits-nounword-declension? word ending)
        (= (case (:comparison ending)
-            :unknown nil
-            :positive (if (and (= (:word-case ending) :nominative)
-                               (= (:number ending) :singular))
-                        (:nominative word)
-                        (:genetive word))
+            :unknown     nil
+            :positive    (if (and (= (:word-case ending) :nominative)
+                                  (= (:number ending) :singular))
+                           (:nominative word)
+                           (:genetive word))
             :comparative (:comparative word)
             :superlative (:superlative word))
           stem)))
@@ -243,9 +259,9 @@
   false)
 
 (defn- prune-endings [endings]
-  (let [s-fn (fn [e]
-               (map #(not (ending-superseded-by? e %))
-                    (remove #{e} endings)))
+  (let [s-fn  (fn [e]
+                (map #(not (ending-superseded-by? e %))
+                     (remove #{e} endings)))
         super (map s-fn endings)]
     (filter #(every? identity (s-fn %))
             endings)))
@@ -265,36 +281,42 @@
 (defmethod sort-endings :default [analysed-word]
   analysed-word)
 
+(defn- fits-word
+  [stem e]
+  (fn [dictword]
+    (and
+     (fits-stem? stem dictword)
+     (fits-ending? stem dictword e))))
+
 (defn analyse-single [word]
-  (let [fitting-endings (filter #(str/ends-with? word (:ending %))
-                                (:endings @dictionary))
-        word-len        (count word)
-        analysed-words  (reduce (fn [results e]
-                                  (let [stem          (subs word 0 (- word-len (count (:ending e))))
-                                        fitting-words (filter (fn [dictword]
-                                                                (and
-                                                                 (fits-stem? stem dictword)
-                                                                 (fits-ending? stem dictword e)))
-                                                              (concat (get-in @dictionary [:stem-lookup (lookup-stem stem)])
-                                                                      (:unprocessed-stems @dictionary)))
-                                        ]
-                                    (reduce (fn [results dictword]
-                                              (if (contains? results (:id dictword))
-                                                (update-in results [(:id dictword) :endings] conj e)
-                                                (assoc results (:id dictword) (assoc dictword
-                                                                                     :analysed-from word
-                                                                                     :endings [e]))))
-                                            results
-                                            fitting-words)))
-                                {}
-                                fitting-endings)]
+  (time! word-analyse-timer
+         (let [fitting-endings (filter #(str/ends-with? word (:ending %))
+                                       (:endings @dictionary))
+               word-len        (count word)
+               analysed-words  (reduce (fn [results e]
+                                         (let [stem          (subs word 0 (- word-len (count (:ending e))))
+                                               fitting-words (filter (fits-word stem e)
+                                                                     (get-in @dictionary [:stem-lookup stem]))]
+                                           (update! fitting-endings-histogram (count fitting-endings))
+                                           (update! fitting-words-histogram (count fitting-words))
+
+                                           (reduce (fn [results dictword]
+                                                     (if (contains? results (:id dictword))
+                                                       (update-in results [(:id dictword) :endings] conj e)
+                                                       (assoc results (:id dictword) (assoc dictword
+                                                                                            :analysed-from word
+                                                                                            :endings [e]))))
+                                                   results
+                                                   fitting-words)))
+                                       {}
+                                       fitting-endings)]
     (apply concat
      ((juxt filter remove)
       #(= (:conjugation %) :esse)
       (map #(assoc %
                    :endings (prune-endings (:endings %)))
            (vals analysed-words))
-     ))))
+     )))))
 
 (defn- keep-vpars [esse v]
   (assoc v :endings
@@ -345,7 +367,7 @@
        )))
 
 (defn analyse [text]
-  (let [words (split-words text)]
+  (let [words (map str/lower-case (split-words text))]
     (produce-analysed-lookup
      (map sort-endings (combine-participles (map analyse-single words))))))
 

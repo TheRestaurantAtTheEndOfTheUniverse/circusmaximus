@@ -25,9 +25,7 @@
                   [(into
                    [:div {:style {:width "40em"
                                   :background-color "white"
-                                  :margin-bottom "1em"}}
-                    [:div (str @selected-word)]
-                    ]
+                                  :margin-bottom "1em"}}]
                    (loop [parts (split-text text)
                           acc   []]
                      (let [current        (first parts)
@@ -40,8 +38,9 @@
                                                         (if on-word?
                                                           {:on-click #(reset! selected-word
                                                                               (if follow-up-word
-                                                                                [current (str current " " follow-up-word)]
-                                                                                [current])
+                                                                                [(str/lower-case current)
+                                                                                 (str/lower-case (str current " " follow-up-word))]
+                                                                                [(str/lower-case current)])
                                                                               )}))
                                            current]))
                          acc

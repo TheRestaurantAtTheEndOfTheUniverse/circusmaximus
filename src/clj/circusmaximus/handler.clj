@@ -10,7 +10,15 @@
             [ring.util.http-response :refer :all]
             [clojure.tools.logging :refer [info]]
             [circusmaximus.forms :as cf]
-            ))
+            [metrics.timers :refer [deftimer]]
+            [metrics.reporters.csv :as csv]
+            )
+  (:import java.util.Locale)
+  )
+
+
+(def CR (csv/reporter "/tmp/" {:locale Locale/US}))
+(csv/start CR 10)
 
 (def mount-target
   [:div#app

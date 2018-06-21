@@ -404,13 +404,9 @@
                                                           (update-in %1 [%2] conj word)
                                                           (assoc %1 %2 #{word}))
                                                        stems
-                                                       (map lookup-stem
-                                                            (remove nil? (preprocessed-stems word)))
-                                                       )
-                                               )
+                                                       (remove nil? (preprocessed-stems word))))
                                              {}
-                                             (filter preprocessed-stems all-words))
-             :unprocessed-stems      (remove preprocessed-stems all-words)
+                                             all-words)
              })))
 
 (init-db)

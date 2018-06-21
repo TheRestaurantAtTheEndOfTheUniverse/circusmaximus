@@ -22,7 +22,4 @@
                          :model (or @word "")
                          :on-change #(dispatch [:analyse %])]
                         (if @result [analysed-text :text @word :analysed @result])]
-
-                       ;;(map analysed-word (apply concat (vals @result)))
-                       )]
-      )))
+                       )])))

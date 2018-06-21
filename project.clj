@@ -31,6 +31,7 @@
                  [day8.re-frame/http-fx "0.1.6"]
                  [org.clojure/math.combinatorics "0.1.4"]
                  [com.cemerick/url "0.1.1"]
+                 [metrics-clojure "2.10.0"]
                  ]
 
   :plugins [[lein-environ "1.1.0"]
